@@ -6,6 +6,7 @@
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <std_msgs/Float32MultiArray.h>
 #include <geometry_msgs/Polygon.h>
@@ -38,6 +39,7 @@ public:
     void getPoseTargetCb(const geometry_msgs::PoseStamped::ConstPtr &msg);
     void getStatusTargetCb(const std_msgs::Int8::ConstPtr  &status);
     void publishCmdVel();
+    void publishCmd();
     void publishCmdVelStop();
 
 
@@ -58,10 +60,12 @@ protected:
     std::string m_statusTargetTopicName;
     std::string m_poseTargetTopicName;
     std::string  m_cmdVelTopicName;
+    std::string  m_cmdTopicName;
     ros::Subscriber m_cameraInfoSub;
     ros::Subscriber m_poseTargetSub;
     ros::Subscriber m_statusTargetSub;
     ros::Publisher m_cmdPub;
+    ros::Publisher m_cmdVelPub;
     int m_freq;
 
     // Servo Base PBVS
@@ -73,11 +77,7 @@ protected:
     vpFeatureThetaU m_s_star_tu;
     vpHomogeneousMatrix m_cMdt;
     vpHomogeneousMatrix m_cMt;
-
-
     double m_servo_time_init;
-
-    vpHomogeneousMatrix m_eMh;
 
     // Servo Base to track an object
     int m_status_target;

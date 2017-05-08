@@ -19,7 +19,9 @@ rov_vs::rov_vs(ros::NodeHandle &nh): m_cam(),  m_camInfoIsInitialized(false), m_
     n.param( "frequency", m_freq, 20);
     n.param<std::string>("cameraInfoName", m_cameraInfoName, "/camera/camera_info");
     n.param<std::string>("targetTopicName", m_poseTargetTopicName, "/vision/pose");
-    n.param<std::string>("cmdVelTopicName", m_cmdVelTopicName, "/command");
+    n.param<std::string>("cmdTopicName", m_cmdTopicName, "/command");
+    n.param<std::string>("cmdVelTopicName", m_cmdVelTopicName, "/cmd_vel");
+
 
     n.param<std::string>("statusTargetTopicName", m_statusTargetTopicName, "/vision/status");
 
@@ -28,8 +30,8 @@ rov_vs::rov_vs(ros::NodeHandle &nh): m_cam(),  m_camInfoIsInitialized(false), m_
     m_statusTargetSub = n.subscribe( m_statusTargetTopicName, 1, (boost::function < void(const std_msgs::Int8::ConstPtr & )>) boost::bind( &rov_vs::getStatusTargetCb, this, _1 ));
     m_poseTargetSub = n.subscribe( m_poseTargetTopicName, 1, (boost::function < void(const geometry_msgs::PoseStamped::ConstPtr & )>) boost::bind( &rov_vs::getPoseTargetCb, this, _1 ));
 
-    m_cmdPub  = n.advertise<std_msgs::Float32MultiArray>(m_cmdVelTopicName, 1000);
-
+    m_cmdPub  = n.advertise<std_msgs::Float32MultiArray>(m_cmdTopicName, 1000);
+    m_cmdVelPub  = n.advertise<geometry_msgs::TwistStamped>(m_cmdVelTopicName, 1000);
 }
 
 rov_vs::~rov_vs(){
@@ -56,8 +58,8 @@ void  rov_vs::initializationVS()
     m_base_task.setServo(vpServo::EYEINHAND_L_cVe_eJe);
     // Interaction matrix is computed with the desired visual features sd
     m_base_task.setInteractionMatrixType(vpServo::CURRENT);
-    //vpAdaptiveGain lambda_base_poly(8.0, 0.6, 8.5);//(1.2, 1.0, 10); // 2.3, 0.7, 15
-    vpAdaptiveGain lambda_base_poly(0.2, 0.1, 0.2);//(1.2, 1.0, 10); // 2.3, 0.7, 15
+    vpAdaptiveGain lambda_base_poly(1.0, 0.4, 2.5);//(1.2, 1.0, 10); // 2.3, 0.7, 15
+    //vpAdaptiveGain lambda_base_poly(0.2, 0.1, 0.2);//(1.2, 1.0, 10); // 2.3, 0.7, 15
 
     m_base_task.setLambda(lambda_base_poly);
 
@@ -65,7 +67,7 @@ void  rov_vs::initializationVS()
     m_cMdt.eye();
     m_cMdt[0][3] = 0.0; // desired tx
     m_cMdt[1][3] = 0.0; // desired ty
-    m_cMdt[2][3] = 4.0; // desired tz
+    m_cMdt[2][3] = 2.0; // desired tz
 
     // Jacobian, we control only vx,vy and vz
     m_eJe.resize(6,3,true);
@@ -119,7 +121,7 @@ void rov_vs::spin()
             m_servo_enabled = !m_servo_enabled;
             ret = false;
         }
-        vpTranslationVector t(0.0,0.0,4.0);
+        vpTranslationVector t(0.0,0.0,2.0);
         vpRotationMatrix r(m_cMt);
         m_cMdt.buildFrom(t,r);
 
@@ -177,6 +179,7 @@ bool rov_vs::computeBaseTLDControlLaw()
         m_base_vel = m_base_task.computeControlLaw(vpTime::measureTimeSecond() - m_servo_time_init);
 
         publishCmdVel();
+        publishCmd();
 
         std::cout << "VEL:" << m_base_vel << std::endl;
         std::cout << "error: " << m_base_task.getError() << std::endl; //<<
@@ -222,7 +225,7 @@ void rov_vs::getPoseTargetCb(const geometry_msgs::PoseStamped::ConstPtr &msg)
     }
 }
 
-void rov_vs::publishCmdVel()
+void rov_vs::publishCmd()
 {
     std_msgs::Float32MultiArray msg;
     msg.data.resize(4);
@@ -234,14 +237,31 @@ void rov_vs::publishCmdVel()
 
 }
 
+void rov_vs::publishCmdVel()
+{
+    geometry_msgs::TwistStamped msg;
+    msg.header.stamp = ros::Time::now();
+    msg.twist.linear.x = m_base_vel[0];
+    msg.twist.linear.y = m_base_vel[1];
+    msg.twist.linear.z = m_base_vel[2];
+    msg.twist.angular.x = 0.;
+    msg.twist.angular.y = 0.;
+    msg.twist.angular.z = 0.;
+
+    m_cmdVelPub.publish(msg);
+}
+
 void rov_vs::publishCmdVelStop()
 {
-    std_msgs::Float32MultiArray msg;
-    msg.data.resize(4);
-    msg.data[0] = 0.0;
-    msg.data[1] = 0.0;
-    msg.data[2] = 0.0;
-    msg.data[3] = 0.0;
-    m_cmdPub.publish(msg);
+    geometry_msgs::TwistStamped msg;
+    msg.header.stamp = ros::Time::now();
+    msg.twist.linear.x = 0.;
+    msg.twist.linear.y = 0.;
+    msg.twist.linear.z = 0.;
+    msg.twist.angular.x = 0.;
+    msg.twist.angular.y = 0.;
+    msg.twist.angular.z = 0.;
+
+    m_cmdVelPub.publish(msg);
 }
 
