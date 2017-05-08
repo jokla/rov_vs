@@ -1,30 +1,24 @@
 # Vision-Based Control for a ROV
 
+# Installation:
 
+You will need:
+* [ViSP](https://github.com/lagadic/visp)  You can clone it and build it from source, see [here](http://visp-doc.inria.fr/doxygen/visp-daily/tutorial-install-ubuntu.html)
+* [vision_visp](https://github.com/lagadic/vision_visp) clone it in your catkin_workspace and build it indicating the path to the build folder of ViSP with   
+`catkin_make -DVISP_DIR=/home/jokla/Software/visp3/visp/build/`
 
 # Subscribers:
 * Intrinsic camera parameters `sensor_msgs::CameraInfo`
-* Polygon of the object detected: `geometry_msgs::Polygon`
+* Pose of the target: `geometry_msgs::Polygon`
 * Status of the detection: `std_msgs::Int8`
 
 # Publisher:
-* Command velocities in `geometry_msgs::TwistStamped`
+* Command velocities in `std_msgs::Float32MultiArray.h`
+
+A Posed-Based Visual Servoing is implemented to follow an object. 
 
 
-To detect and track an object you can use ROS OpenTLD:   
-https://github.com/pandora-auth-ros-pkg/open_tld
-https://github.com/jokla/pandora_tld
-
-
-An Image-Based Visual Servoing is implemented to follow an object. The current visual features that are used are s = (x, log(Z/Z*)). The desired one are s* = (x*, 0), with:
-
-- x the abscissa of the point corresponding to the center of gravity measured at each iteration,
-- x* the desired abscissa position of the point (x* = 0)
-- Z the depth of the point measured at each iteration
-- Z* the desired depth of the point
-The degrees of freedom that are controlled are Vx and Wz where Wz is the rotational velocity and Vx the translational velocity of the robot.
-
-The value of Z is estimated from the area of the bounding box that is proportional to the depth Z.
+The degrees of freedom that are controlled are Vx, Vy and Wz.
 
 For the Visual Servoing I used ViSP:
 https://visp.inria.fr/
@@ -32,4 +26,4 @@ https://visp.inria.fr/
 
 
 To launch:
-`$ roslaunch vbacc vbacc.launch`
+`$ roslaunch rov_vs rov_vs.launch `
