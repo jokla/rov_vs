@@ -3,8 +3,9 @@
 # Installation:
 
 You will need:
-* [ViSP](https://github.com/lagadic/visp)  
-* [vision_visp](https://github.com/lagadic/vision_visp)
+* [ViSP](https://github.com/lagadic/visp)  You can clone it and build it from source, see [here](http://visp-doc.inria.fr/doxygen/visp-daily/tutorial-install-ubuntu.html)
+* [vision_visp](https://github.com/lagadic/vision_visp) clone it in your catkin_workspace and build it indicating the path to the build folder of ViSP with   
+`catkin_make -DVISP_DIR=/home/jokla/Software/visp3/visp/build/`
 
 # Subscribers:
 * Intrinsic camera parameters `sensor_msgs::CameraInfo`
