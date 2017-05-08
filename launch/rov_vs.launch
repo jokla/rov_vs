@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<launch>
+
+
+
+  <node name="rov_vs" pkg="rov_vs" type="rov_vs_node" output="screen" >
+    <param name="cmdTopicName" value="/command" />
+    <param name="cameraInfoName" value="/camera/camera_info" />
+    <param name="TargetTopicName" value="/vision/pose" />
+    <param name="statusTargetTopicName" value="/vision/status" />
+
+  </node>
+
+
+</launch>

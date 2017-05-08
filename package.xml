@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<package>
+  <name>rov_vs</name>
+  <version>0.0.1</version>
+  <description>The rov_vs package</description>
+  <maintainer email="giovanni.claudio@inria.fr">jokla</maintainer>
+ 
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>tf</build_depend>
+  <build_depend>visp_bridge</build_depend>
+
+  <run_depend>geometry_msgs</run_depend>
+  <run_depend>roscpp</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>std_msgs</run_depend>
+  <run_depend>tf</run_depend>
+  <run_depend>visp_bridge</run_depend>
+
+
+
+</package>
