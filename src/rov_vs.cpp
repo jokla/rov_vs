@@ -59,8 +59,6 @@ void  rov_vs::initializationVS()
     // Interaction matrix is computed with the desired visual features sd
     m_base_task.setInteractionMatrixType(vpServo::CURRENT);
     vpAdaptiveGain lambda_base_poly(1.0, 0.4, 2.5);//(1.2, 1.0, 10); // 2.3, 0.7, 15
-    //vpAdaptiveGain lambda_base_poly(0.2, 0.1, 0.2);//(1.2, 1.0, 10); // 2.3, 0.7, 15
-
     m_base_task.setLambda(lambda_base_poly);
 
     // Define desired pose
