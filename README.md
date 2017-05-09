@@ -9,16 +9,16 @@ You will need:
 
 # Subscribers:
 * Intrinsic camera parameters `sensor_msgs::CameraInfo`
-* Pose of the target: `geometry_msgs::Polygon`
+* Pose of the target: `geometry_msgs::PoseStamped`
 * Status of the detection: `std_msgs::Int8`
 
 # Publisher:
 * Command velocities in `std_msgs::Float32MultiArray.h`
 
-A Posed-Based Visual Servoing is implemented to follow an object. 
+A Posed-Based Visual Servoing is implemented to track an object. 
 
 
-The degrees of freedom that are controlled are Vx, Vy and Wz.
+The degrees of freedom that are controlled are Vx, Vy and  Vz.
 
 For the Visual Servoing I used ViSP:
 https://visp.inria.fr/
