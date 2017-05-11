@@ -5,10 +5,15 @@
 #include <visp/vpFeatureBuilder.h>
 #include <visp/vpPixelMeterConversion.h>
 #include <visp/vpMeterPixelConversion.h>
+#include <visp/vpPlot.h>
+#include <visp/vpTime.h>
+
+
+#include "pid_controller.h"
 
 #include "rov_vs.h"
 
-rov_vs::rov_vs(ros::NodeHandle &nh): m_cam(),  m_camInfoIsInitialized(false), m_width(800), m_height(600)
+rov_vs::rov_vs(ros::NodeHandle &nh): m_cam(),  m_camInfoIsInitialized(false), m_width(800), m_height(600),  m_effort_cmd(4)
 {
     // read in config options
     n = nh;
@@ -19,19 +24,19 @@ rov_vs::rov_vs(ros::NodeHandle &nh): m_cam(),  m_camInfoIsInitialized(false), m_
     n.param( "frequency", m_freq, 20);
     n.param<std::string>("cameraInfoName", m_cameraInfoName, "/camera/camera_info");
     n.param<std::string>("targetTopicName", m_poseTargetTopicName, "/vision/pose");
+    n.param<std::string>("RovTopicName", m_poseRovTopicName, "/pose_estimation");
     n.param<std::string>("cmdTopicName", m_cmdTopicName, "/command");
     n.param<std::string>("cmdVelTopicName", m_cmdVelTopicName, "/cmd_vel");
-
-
     n.param<std::string>("statusTargetTopicName", m_statusTargetTopicName, "/vision/status");
 
     m_cameraInfoSub = n.subscribe( m_cameraInfoName, 1, (boost::function < void(const sensor_msgs::CameraInfoConstPtr & )>) boost::bind( &rov_vs::getCameraInfoCb, this, _1 ));
-
     m_statusTargetSub = n.subscribe( m_statusTargetTopicName, 1, (boost::function < void(const std_msgs::Int8::ConstPtr & )>) boost::bind( &rov_vs::getStatusTargetCb, this, _1 ));
     m_poseTargetSub = n.subscribe( m_poseTargetTopicName, 1, (boost::function < void(const geometry_msgs::PoseStamped::ConstPtr & )>) boost::bind( &rov_vs::getPoseTargetCb, this, _1 ));
+    m_poseRovSub = n.subscribe( m_poseRovTopicName, 1, (boost::function < void(const geometry_msgs::PoseStamped::ConstPtr & )>) boost::bind( &rov_vs::getPoseRovCb, this, _1 ));
 
     m_cmdPub  = n.advertise<std_msgs::Float32MultiArray>(m_cmdTopicName, 1000);
     m_cmdVelPub  = n.advertise<geometry_msgs::TwistStamped>(m_cmdVelTopicName, 1000);
+
 }
 
 rov_vs::~rov_vs(){
@@ -40,9 +45,6 @@ rov_vs::~rov_vs(){
 
 void  rov_vs::initializationVS()
 {
-    I.resize(m_height, m_width, 0);
-    d.init(I);
-    vpDisplay::setTitle(I, "ViSP viewer");
 
     // PBVS Visual Servoing
     m_t.setFeatureTranslationType(vpFeatureTranslation::cdMc);
@@ -90,102 +92,69 @@ void  rov_vs::initializationVS()
     m_cMb = bMc.inverse();
     std::cout << "Camera to base frame cMb  :" << std::endl << m_cMb << std::endl;
     std::cout << "Visual Servoing initialized" << std::endl;
+
+    // Homogeneous matrix between world and target
+    m_wMt[0][3] = -92.24;
+    m_wMt[1][3] = -193.2;
+    m_wMt[2][3] = -60.54;
+
 }
 
 void rov_vs::spin()
 {
     ros::Rate loop_rate(m_freq);
-    vpDisplay::display(I);
-
-
-    while(!m_camInfoIsInitialized)
-    {
-        ros::spinOnce();
-        loop_rate.sleep();
-    }
 
     // Initialize Visual servoing variables
     this->initializationVS();
 
+    PID px(8, 46, 250, 0.0001, 2000);
+    PID py(8 , 46, 250, 0.0001, 2000);
+    PID pz(7, 60, 270, 0.0001, 2000);
+
+
+
+    // Create graph
+    // Create a window (700 by 700) at position (100, 200) with one graph
+    vpPlot A(1, 700, 700, 100, 200, "Translations");
+    // The first graphic contains 1 curve and the second graphic contains 2 curves
+    A.initGraph(0,3);
+    A.setLegend(0,0,"x");
+    A.setLegend(0,1,"y");
+    A.setLegend(0,2,"z");
+
+    int count = 0;
+    double time_prev = vpTime::measureTimeSecond();
+
     while(ros::ok()){
-        vpDisplay::display(I);
+        // vpDisplay::display(I);
 
-        vpMouseButton::vpMouseButtonType button;
-        bool ret = vpDisplay::getClick(I, button, false);
+        double time_now = vpTime::measureTimeSecond();
+
+        // Test without camera
+        vpHomogeneousMatrix rMt = m_wMr.inverse()*m_wMt;
+
+        std::cout << "t:" << std::endl << rMt.getTranslationVector() << std::endl;
+        double dt = time_now - time_prev;
+        std::cout << "dt = " << dt << std::endl;
 
 
-        if (ret && button == vpMouseButton::button2)
-        {
-            m_servo_enabled = !m_servo_enabled;
-            ret = false;
-        }
-        vpTranslationVector t(0.0,0.0,2.0);
-        vpRotationMatrix r(m_cMt);
-        m_cMdt.buildFrom(t,r);
+        m_effort_cmd[0] = -px.calculateOutput(rMt[0][3], 0.0, dt);
+        m_effort_cmd[1] = -py.calculateOutput(rMt[1][3], 0.0, dt);
+        m_effort_cmd[2] = -pz.calculateOutput(rMt[2][3],-2.0, dt);
 
-        vpDisplay::displayFrame(I, m_cMdt, m_cam, 0.2);
-
-        if(m_status_target == 1)
-            vpDisplay::displayFrame(I, m_cMt, m_cam, 0.5);
-
-        if (m_servo_enabled && !this->computeBaseTLDControlLaw())
-            vpDisplay::displayText(I, 30, 30, "Servo Base TDL enabled", vpColor::green);
-        else
-        {
-            this->publishCmdVelStop();
-            vpDisplay::displayText(I, 30, 30, "Middle click to enable the base VS", vpColor::green);
-        }
-
-        if (ret && button == vpMouseButton::button3)
-            break;
-
-        ret = false;
-        ros::spinOnce();
-        vpDisplay::flush(I);
-
-        loop_rate.sleep();
-    }
-
-}
-
-bool rov_vs::computeBaseTLDControlLaw()
-{
-    bool vs_finished = false;
-
-    if (m_cMt_isInitialized )
-    {
-        static bool first_time = true;
-        if (first_time) {
-            std::cout << "-- Start visual servoing of the base (PBVS)" << std::endl;
-            m_servo_time_init = vpTime::measureTimeSecond();
-            first_time = false;
-        }
-
-        m_base_task.set_eJe(m_eJe);
-        m_base_task.set_cVe( vpVelocityTwistMatrix(m_cMb));
-
-        vpHomogeneousMatrix cdMc = m_cMdt * m_cMt.inverse();
-        m_t.buildFrom(cdMc);
-
-        //m_tu.buildFrom(cdMc);
-        //m_base_task.print();
-        //    std::cout << "    m_base_task.getInteractionMatrix()" << m_base_task.getInteractionMatrix() << std::endl;
-        //    std::cout << "m_base_task.getError()" << m_base_task.getError() << std::endl;
-        //    std::cout << "m_base_task.getTaskJacobian()" << m_base_task.getTaskJacobian() << std::endl;
-
-        //Compute velocities PBVS task
-        m_base_vel = m_base_task.computeControlLaw(vpTime::measureTimeSecond() - m_servo_time_init);
-
-        publishCmdVel();
+        if(count>10)
+            A.plot(0,count,rMt.getTranslationVector());
+        // std::cout << "m_effort_cmd" << std::endl << m_effort_cmd << std::endl;
         publishCmd();
 
-        std::cout << "VEL:" << m_base_vel << std::endl;
-        std::cout << "error: " << m_base_task.getError() << std::endl; //<<
 
+        ros::spinOnce();
+        count++;
+
+        loop_rate.sleep();
+        time_prev = time_now;
     }
 
-
-    return vs_finished;
 }
 
 void rov_vs::getStatusTargetCb(const std_msgs::Int8::ConstPtr  &status)
@@ -223,13 +192,28 @@ void rov_vs::getPoseTargetCb(const geometry_msgs::PoseStamped::ConstPtr &msg)
     }
 }
 
+
+void rov_vs::getPoseRovCb(const geometry_msgs::PoseStamped::ConstPtr &msg)
+{
+    m_wMr = visp_bridge::toVispHomogeneousMatrix(msg->pose);
+
+    if (!m_wMr.isAnHomogeneousMatrix())
+        exit(0);
+
+    if ( !m_wMr_isInitialized )
+    {
+        ROS_INFO("DesiredPose received");
+        m_wMr_isInitialized = true;
+    }
+}
+
 void rov_vs::publishCmd()
 {
     std_msgs::Float32MultiArray msg;
     msg.data.resize(4);
-    msg.data[0] = m_base_vel[0];
-    msg.data[1] = m_base_vel[1];
-    msg.data[2] = m_base_vel[2];
+    msg.data[0] = m_effort_cmd[0];
+    msg.data[1] = m_effort_cmd[1];
+    msg.data[2] = m_effort_cmd[2];
     msg.data[3] = 0.0;
     m_cmdPub.publish(msg);
 

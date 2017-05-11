@@ -53,6 +53,8 @@ include_directories(SYSTEM
 add_library(rov_vs
   include/rov_vs.h
   src/rov_vs.cpp
+  include/pid_controller.h
+  src/pid_controller.cpp
 )
 
 

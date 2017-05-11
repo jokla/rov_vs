@@ -37,6 +37,7 @@ public:
     void spin();
     void getCameraInfoCb(const sensor_msgs::CameraInfoConstPtr &msg);
     void getPoseTargetCb(const geometry_msgs::PoseStamped::ConstPtr &msg);
+    void getPoseRovCb(const geometry_msgs::PoseStamped::ConstPtr &msg);
     void getStatusTargetCb(const std_msgs::Int8::ConstPtr  &status);
     void publishCmdVel();
     void publishCmd();
@@ -59,11 +60,13 @@ protected:
     std::string m_cameraInfoName;
     std::string m_statusTargetTopicName;
     std::string m_poseTargetTopicName;
+    std::string m_poseRovTopicName;
     std::string  m_cmdVelTopicName;
     std::string  m_cmdTopicName;
     ros::Subscriber m_cameraInfoSub;
     ros::Subscriber m_poseTargetSub;
     ros::Subscriber m_statusTargetSub;
+    ros::Subscriber m_poseRovSub;
     ros::Publisher m_cmdPub;
     ros::Publisher m_cmdVelPub;
     int m_freq;
@@ -77,7 +80,10 @@ protected:
     vpFeatureThetaU m_s_star_tu;
     vpHomogeneousMatrix m_cMdt;
     vpHomogeneousMatrix m_cMt;
+    vpHomogeneousMatrix m_wMr;
+    vpHomogeneousMatrix m_wMt;
     double m_servo_time_init;
+
 
     // Servo Base to track an object
     int m_status_target;
@@ -85,10 +91,13 @@ protected:
     vpMatrix m_eJe;
     vpHomogeneousMatrix m_cMb;
     vpColVector m_base_vel;
+    vpColVector m_effort_cmd;
+
 
     //conditions
     bool m_servo_enabled;
     bool m_camInfoIsInitialized;
     bool m_cMt_isInitialized;
+    bool m_wMr_isInitialized;
 
 };
