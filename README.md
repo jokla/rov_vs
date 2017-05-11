@@ -9,19 +9,15 @@ You will need:
 
 # Subscribers:
 * Intrinsic camera parameters `sensor_msgs::CameraInfo`
-* Pose of the target: `geometry_msgs::PoseStamped`
+* Pose of the target by vision: `geometry_msgs::PoseStamped` (not used here)
+* Pose of the rov: `geometry_msgs::PoseStamped`
 * Status of the detection: `std_msgs::Int8`
 
 # Publisher:
 * Command velocities in `std_msgs::Float32MultiArray.h`
 
-A Posed-Based Visual Servoing is implemented to track an object. 
 
-
-The degrees of freedom that are controlled are Vx, Vy and  Vz.
-
-For the Visual Servoing I used ViSP:
-https://visp.inria.fr/
+The PID controllers generate 3 forces (fx,fy and fz) so that the target stays in the center of the camera, at a 2 meters distance in the Z axis.
 
 
 
