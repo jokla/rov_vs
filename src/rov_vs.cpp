@@ -8,9 +8,7 @@
 #include <visp/vpPlot.h>
 #include <visp/vpTime.h>
 
-
 #include "pid_controller.h"
-
 #include "rov_vs.h"
 
 rov_vs::rov_vs(ros::NodeHandle &nh): m_cam(),  m_camInfoIsInitialized(false), m_width(800), m_height(600),  m_effort_cmd(4)
@@ -41,6 +39,13 @@ rov_vs::rov_vs(ros::NodeHandle &nh): m_cam(),  m_camInfoIsInitialized(false), m_
 
 rov_vs::~rov_vs(){
 
+}
+
+void rov_vs::waitforPose(){
+    while ( ros::ok ()){
+        if(m_wMr_isInitialized) return;
+        ros::spinOnce();
+    }
 }
 
 void  rov_vs::initializationVS()
@@ -109,9 +114,7 @@ void rov_vs::spin()
 
     PID px(8, 46, 250, 0.0001, 2000);
     PID py(8 , 46, 250, 0.0001, 2000);
-    PID pz(7, 60, 270, 0.0001, 2000);
-
-
+    PID pz(7, 60, 300, 0.0001, 2000);
 
     // Create graph
     // Create a window (700 by 700) at position (100, 200) with one graph
@@ -123,36 +126,37 @@ void rov_vs::spin()
     A.setLegend(0,2,"z");
 
     int count = 0;
+    waitforPose();
+
     double time_prev = vpTime::measureTimeSecond();
 
     while(ros::ok()){
-        // vpDisplay::display(I);
-
         double time_now = vpTime::measureTimeSecond();
 
         // Test without camera
         vpHomogeneousMatrix rMt = m_wMr.inverse()*m_wMt;
 
         std::cout << "t:" << std::endl << rMt.getTranslationVector() << std::endl;
-        double dt = time_now - time_prev;
+        double dt = 1./m_freq;
+        if (count > 0)
+            dt = time_now - time_prev;
         std::cout << "dt = " << dt << std::endl;
 
-
-        m_effort_cmd[0] = -px.calculateOutput(rMt[0][3], 0.0, dt);
+        m_effort_cmd[0] = -px.calculateOutput(rMt[0][3], m_cMb[1][3], dt);
         m_effort_cmd[1] = -py.calculateOutput(rMt[1][3], 0.0, dt);
-        m_effort_cmd[2] = -pz.calculateOutput(rMt[2][3],-2.0, dt);
+        m_effort_cmd[2] = -pz.calculateOutput(rMt[2][3],-m_cMdt[2][3], dt);
 
-        if(count>10)
-            A.plot(0,count,rMt.getTranslationVector());
-        // std::cout << "m_effort_cmd" << std::endl << m_effort_cmd << std::endl;
-        publishCmd();
-
+        A.plot(0,count,rMt.getTranslationVector());
+        //std::cout << "m_effort_cmd" << std::endl << m_effort_cmd << std::endl;
+        if (count>10)
+            publishCmd();
 
         ros::spinOnce();
         count++;
 
         loop_rate.sleep();
         time_prev = time_now;
+
     }
 
 }
@@ -181,7 +185,7 @@ void rov_vs::getCameraInfoCb(const sensor_msgs::CameraInfoConstPtr &msg)
 void rov_vs::getPoseTargetCb(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
     m_cMt = visp_bridge::toVispHomogeneousMatrix(msg->pose);
-
+    std::cout << "Received m_cMt"<<std::endl;
     if (!m_cMt.isAnHomogeneousMatrix())
         exit(0);
 
@@ -191,7 +195,6 @@ void rov_vs::getPoseTargetCb(const geometry_msgs::PoseStamped::ConstPtr &msg)
         m_cMt_isInitialized = true;
     }
 }
-
 
 void rov_vs::getPoseRovCb(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {

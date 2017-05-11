@@ -42,6 +42,7 @@ public:
     void publishCmdVel();
     void publishCmd();
     void publishCmdVelStop();
+    void waitforPose();
 
 
 protected:

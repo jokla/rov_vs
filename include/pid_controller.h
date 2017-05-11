@@ -25,7 +25,8 @@ class PID{
     double checkLimits(double output);
     double kp = 0.0, ki = 0.0, kd = 0.0, previous_output = 0.0, 
         previous_error = 0.0, previous_time = 0.0, min_output = 0.0,
-        max_output = 0.0;
+        max_output = 0.0, integral = 0.0;
+    bool first_time = 1;
 };
 
 #endif

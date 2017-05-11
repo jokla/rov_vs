@@ -34,13 +34,20 @@ double PID::calculateOutput(double set_point, double current_point, double delta
   //double current_time =0.0;// boost::posix_time::ptime::microsec_clock::universal_time();
 
   double error = current_point - set_point;
-   delta_time = 0.05;//current_time - previous_time;
+  //delta_time = 0.05;//current_time - previous_time;
 
   //Calculate the area under the error curve (Riemann Sum)
   double error_integral = error * delta_time;
+  //integral = integral + error_integral;
 
   //Calculate the derivative (change in error / change in time)
   double delta_error = (error - previous_error) / delta_time;
+
+  if (first_time)
+  {
+      delta_error = 0.0;
+      first_time = 0;
+  }
 
   //Calculate PID output based on tunings
   double output = kp * error + ki * error_integral + kd * delta_error;
