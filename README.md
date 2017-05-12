@@ -1,5 +1,8 @@
 # Vision-Based Control for a ROV
 
+master branch: PBVS in velocities
+pid branch: PID controller
+
 # Installation:
 
 You will need:
