@@ -14,7 +14,7 @@ You will need:
 * Status of the detection: `std_msgs::Int8`
 
 # Publisher:
-* Command velocities in `std_msgs::Float32MultiArray.h`
+* Effort commands in `std_msgs::Float32MultiArray.h`
 
 
 The PID controllers generate 3 forces (fx,fy and fz) so that the target stays in the center of the camera, at a 2 meters distance in the Z axis.
